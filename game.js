@@ -43,6 +43,12 @@ function surfaceTexture(base, fleck, count = 1600) {
   c.globalAlpha=1;const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;
 }
 
+function windowTexture(warm=false){
+  const canvas=document.createElement('canvas');canvas.width=128;canvas.height=256;const c=canvas.getContext('2d');c.fillStyle='#182126';c.fillRect(0,0,128,256);
+  for(let y=10;y<250;y+=31)for(let x=8;x<124;x+=30){const lit=((x*13+y*7+(warm?5:0))%11)>3;c.fillStyle=lit?(warm?'#d5a75f':'#78aeb5'):'#26383e';c.fillRect(x,y,21,17);c.fillStyle=lit?'rgba(255,245,205,.18)':'rgba(0,0,0,.18)';c.fillRect(x+2,y+2,17,3);}
+  const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;
+}
+
 const grassTexture=surfaceTexture('#537452','#b4c98a',2600);grassTexture.repeat.set(42,42);
 const asphaltTexture=surfaceTexture('#292c2e','#85898a',1200);asphaltTexture.repeat.set(24,24);
 const concreteTexture=surfaceTexture('#8d908d','#d9d7cc',1300);concreteTexture.repeat.set(12,12);
@@ -56,7 +62,11 @@ const mats = {
   leaf: new THREE.MeshStandardMaterial({ color:0x245b38, roughness:.92 }),
   glass: new THREE.MeshPhysicalMaterial({ color:0x60899b, metalness:.05, roughness:.12, transmission:.18, transparent:true, opacity:.78 }),
   chrome: new THREE.MeshStandardMaterial({ color:0xc8d0d2, metalness:.92, roughness:.16 }),
+  windowsCool: null,
+  windowsWarm: null,
 };
+mats.windowsCool=new THREE.MeshStandardMaterial({map:windowTexture(false),emissive:0x213b41,emissiveIntensity:.55,metalness:.28,roughness:.3});
+mats.windowsWarm=new THREE.MeshStandardMaterial({map:windowTexture(true),emissive:0x583715,emissiveIntensity:.62,metalness:.28,roughness:.3});
 
 function mesh(geo, mat, position, parent = scene) {
   const m = new THREE.Mesh(geo, mat); m.position.copy(position); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
@@ -96,7 +106,7 @@ function createWorld() {
 function createSky(){
   const sky=new THREE.Mesh(new THREE.SphereGeometry(620,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(0x347da4)},bottom:{value:new THREE.Color(0xc8d7ce)}},vertexShader:'varying vec3 vPos; void main(){vPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'varying vec3 vPos;uniform vec3 top;uniform vec3 bottom;void main(){float h=clamp(normalize(vPos).y*.75+.28,0.0,1.0);gl_FragColor=vec4(mix(bottom,top,pow(h,.7)),1.0);}'}));scene.add(sky);world.sky=sky;
   const cloudMat=new THREE.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.52,roughness:1,depthWrite:false});
-  for(let i=0;i<18;i++){const g=new THREE.Group(),a=rand()*Math.PI*2,r=120+rand()*300;g.position.set(Math.cos(a)*r,75+rand()*55,Math.sin(a)*r);for(let j=0;j<4;j++){const puff=mesh(new THREE.SphereGeometry(8+rand()*12,8,6),cloudMat,new THREE.Vector3(j*10,rand()*5,rand()*9),g);puff.scale.y=.38;}scene.add(g);world.clouds.push(g);}
+  for(let i=0;i<18;i++){const g=new THREE.Group(),a=rand()*Math.PI*2,r=120+rand()*300;g.position.set(Math.cos(a)*r,75+rand()*55,Math.sin(a)*r);for(let j=0;j<4;j++){const puff=mesh(new THREE.SphereGeometry(8+rand()*12,8,6),cloudMat,new THREE.Vector3(j*10,rand()*5,rand()*9),g);puff.scale.y=.38;puff.castShadow=false;puff.receiveShadow=false;}scene.add(g);world.clouds.push(g);}
 }
 
 function road(x,z,w,d){
@@ -121,9 +131,9 @@ function createBlock(cx,cz,gx,gz){
     mesh(new THREE.BoxGeometry(2.1,2.7,.08),new THREE.MeshStandardMaterial({color:0x26343a,metalness:.45,roughness:.35}),new THREE.Vector3(0,-h/2+1.35,-d/2-.045),b);
     mesh(new THREE.BoxGeometry(w*1.025,.18,d*1.025),mats.sidewalk,new THREE.Vector3(0,-h/2+.05,0),b);
     if(h>18){
-      const winMat=new THREE.MeshStandardMaterial({color:rand()>.35?0x74aeb6:0xd2a765,emissive:rand()>.42?0x25434c:0x6b471e,emissiveIntensity:.55,metalness:.35,roughness:.24});
-      for(let y=-h/2+3;y<h/2-1;y+=3.8) for(let side of [-1,1]){for(let wx=-w*.3;wx<=w*.3;wx+=w*.3){const win=mesh(new THREE.PlaneGeometry(w*.2,1.35),winMat,new THREE.Vector3(wx,y,side*(d/2+.011)),b);if(side<0)win.rotation.y=Math.PI;}}
-      for(let y=-h/2+3;y<h/2-1;y+=3.8) for(let side of [-1,1]){for(let wz=-d*.3;wz<=d*.3;wz+=d*.3){const win=mesh(new THREE.PlaneGeometry(d*.2,1.35),winMat,new THREE.Vector3(side*(w/2+.011),y,wz),b);win.rotation.y=side*Math.PI/2;}}
+      const winMat=rand()>.42?mats.windowsCool:mats.windowsWarm;
+      for(let side of [-1,1]){const win=mesh(new THREE.PlaneGeometry(w*.72,h*.74),winMat,new THREE.Vector3(0,0,side*(d/2+.011)),b);if(side<0)win.rotation.y=Math.PI;win.castShadow=false;}
+      for(let side of [-1,1]){const win=mesh(new THREE.PlaneGeometry(d*.72,h*.74),winMat,new THREE.Vector3(side*(w/2+.011),0,0),b);win.rotation.y=side*Math.PI/2;win.castShadow=false;}
     }
   });
 }
