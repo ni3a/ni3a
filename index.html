@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#09131d" />
+    <title>NEON DISTRICT // FPS Prototype</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="game"></div>
+
+    <div id="loading" class="screen active">
+      <div class="loader-mark">ND</div>
+      <p>GENERATING DISTRICT</p>
+      <div class="load-track"><span></span></div>
+    </div>
+
+    <div id="menu" class="screen">
+      <div class="menu-card">
+        <div class="eyebrow">PLAYABLE PROTOTYPE // ALPHA 01</div>
+        <h1>NEON<br /><i>DISTRICT</i></h1>
+        <p class="pitch">Drop into a living island. Clear hostile zones, recover energy cores, and steal a ride when the streets get hot.</p>
+        <button id="deploy">DEPLOY SOLO <span>→</span></button>
+        <div class="controls-grid">
+          <span><b>WASD</b> MOVE / DRIVE</span><span><b>MOUSE</b> AIM</span>
+          <span><b>LMB</b> FIRE</span><span><b>R</b> RELOAD</span>
+          <span><b>SHIFT</b> SPRINT / BOOST</span><span><b>E</b> ENTER / EXIT CAR</span>
+          <span><b>SPACE</b> JUMP / BRAKE</span><span><b>M</b> MAP</span>
+        </div>
+      </div>
+      <div class="version">BUILD 0.1 // WEBGL</div>
+    </div>
+
+    <div id="hud" class="hidden">
+      <header>
+        <div class="brand"><b>NEON</b> DISTRICT</div>
+        <div id="objective"><small>CURRENT OBJECTIVE</small><strong>SECURE THE ENERGY CORES</strong></div>
+        <div id="zone"><span></span> DISTRICT ONLINE</div>
+      </header>
+      <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+      <div id="hitmarker">×</div>
+      <div id="interact"></div>
+      <div id="damage-vignette"></div>
+      <div id="toast"></div>
+      <canvas id="minimap" width="220" height="220"></canvas>
+      <div id="stats">
+        <div class="stat-row"><span class="icon">+</span><div><small>HEALTH</small><strong id="healthText">100</strong></div></div>
+        <div class="bar"><i id="healthBar"></i></div>
+        <div class="stat-row shield"><span class="icon">◆</span><div><small>SHIELD</small><strong id="shieldText">50</strong></div></div>
+        <div class="bar shieldbar"><i id="shieldBar"></i></div>
+      </div>
+      <div id="ammo"><small>VX-7 RIFLE</small><div><strong id="ammoNow">30</strong><span>/</span><em id="ammoReserve">120</em></div></div>
+      <div id="mission"><span>ENERGY CORES</span><strong><i id="coresNow">0</i> / 5</strong></div>
+      <div id="speed" class="hidden"><strong>000</strong><span>KM/H</span></div>
+      <div id="car-health" class="hidden"><small>VEHICLE</small><div><i></i></div></div>
+    </div>
+
+    <div id="mapOverlay" class="screen map-screen">
+      <button id="closeMap">CLOSE MAP [M]</button>
+      <h2>DISTRICT MAP</h2>
+      <canvas id="bigMap" width="700" height="700"></canvas>
+    </div>
+
+    <script type="importmap">
+      { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+    </script>
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>
