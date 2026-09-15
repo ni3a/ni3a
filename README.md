@@ -20,7 +20,7 @@ Then open `http://localhost:8080`.
 - `Shift`: sprint / vehicle boost
 - `Space`: jump / handbrake
 - `R`: reload
-- `E`: enter or exit the red vehicle
+- `E`: enter or exit any parked vehicle
 - `M`: full map
 - `Esc`: pause / release mouse
 

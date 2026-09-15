@@ -72,7 +72,7 @@ function createWorld() {
   }
   createTower(-2, -2);
   [[28,32],[-76,22],[72,-77],[-116,-105],[105,72]].forEach((p,i)=>createCore(p[0],p[1],i));
-  [[8,43,0xff405f],[-45,-97,0x5ef6ff],[80,39,0xd8ff52]].forEach((p,i)=>createCar(p[0],p[1],p[2],i===0));
+  [[3,40,0xff405f],[-45,-97,0x5ef6ff],[80,39,0xd8ff52]].forEach((p)=>createCar(p[0],p[1],p[2],true));
   [[25,-20],[-52,58],[76,-42],[-110,80],[112,10],[3,-106],[55,104],[-84,-75]].forEach((p,i)=>createEnemy(p[0],p[1],i));
   createWeapon();
 }
@@ -125,11 +125,24 @@ function createCore(x,z,id){
 }
 
 function createEnemy(x,z,id){
-  const g=new THREE.Group();g.position.set(x,1.55,z);scene.add(g);
-  const body=mesh(new THREE.CapsuleGeometry(.55,.85,4,8),new THREE.MeshStandardMaterial({color:0x941f38,roughness:.6}),new THREE.Vector3(),g);
-  const eye=mesh(new THREE.BoxGeometry(.55,.12,.08),mats.neon,new THREE.Vector3(0,.3,-.52),g);
-  g.userData={id,health:100,body,eye,origin:new THREE.Vector3(x,1.55,z),phase:rand()*9,lastShot:0,alive:true};
-  body.userData.enemy=g;eye.userData.enemy=g;world.enemies.push(g);
+  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+  const skin=new THREE.MeshStandardMaterial({color:[0x8c5c45,0xb97b5c,0xd19a73][id%3],roughness:.85});
+  const outfit=new THREE.MeshStandardMaterial({color:[0x941f38,0x314d78,0x4c3e65,0x75542f][id%4],roughness:.72});
+  const pants=new THREE.MeshStandardMaterial({color:0x18232c,roughness:.9});
+  const torso=mesh(new THREE.BoxGeometry(.85,1.05,.42),outfit,new THREE.Vector3(0,1.55,0),g);
+  const head=mesh(new THREE.SphereGeometry(.31,10,8),skin,new THREE.Vector3(0,2.38,0),g);
+  const hair=mesh(new THREE.SphereGeometry(.32,10,5,0,Math.PI*2,0,Math.PI*.48),mats.dark,new THREE.Vector3(0,2.48,0),g);
+  const visor=mesh(new THREE.BoxGeometry(.48,.1,.06),mats.neon,new THREE.Vector3(0,2.4,-.285),g);
+  const leftArm=new THREE.Group(),rightArm=new THREE.Group();leftArm.position.set(-.57,1.94,0);rightArm.position.set(.57,1.94,0);g.add(leftArm,rightArm);
+  mesh(new THREE.CapsuleGeometry(.11,.58,3,6),outfit,new THREE.Vector3(0,-.34,0),leftArm);
+  mesh(new THREE.CapsuleGeometry(.11,.58,3,6),outfit,new THREE.Vector3(0,-.34,0),rightArm);
+  const leftLeg=new THREE.Group(),rightLeg=new THREE.Group();leftLeg.position.set(-.23,1.05,0);rightLeg.position.set(.23,1.05,0);g.add(leftLeg,rightLeg);
+  mesh(new THREE.CapsuleGeometry(.14,.68,3,6),pants,new THREE.Vector3(0,-.42,0),leftLeg);
+  mesh(new THREE.CapsuleGeometry(.14,.68,3,6),pants,new THREE.Vector3(0,-.42,0),rightLeg);
+  const parts=[torso,head,hair,visor];
+  leftArm.traverse(o=>{if(o.isMesh)parts.push(o)});rightArm.traverse(o=>{if(o.isMesh)parts.push(o)});leftLeg.traverse(o=>{if(o.isMesh)parts.push(o)});rightLeg.traverse(o=>{if(o.isMesh)parts.push(o)});
+  g.userData={id,health:100,head,torso,leftArm,rightArm,leftLeg,rightLeg,origin:new THREE.Vector3(x,0,z),phase:rand()*9,lastShot:0,alive:true,walking:false};
+  parts.forEach(p=>p.userData.enemy=g);[head,hair,visor].forEach(p=>p.userData.hitZone='head');world.enemies.push(g);
 }
 
 function createCar(x,z,color,driveable){
@@ -187,7 +200,7 @@ function shoot(){
   state.gun.position.z-=.065;setTimeout(()=>state.gun.position.z+=.065,55);
   raycaster.setFromCamera(new THREE.Vector2(0,0),camera);const targets=[];world.enemies.filter(e=>e.userData.alive).forEach(e=>e.traverse(o=>{if(o.isMesh)targets.push(o)}));
   const hits=raycaster.intersectObjects(targets,false);let end=camera.position.clone().add(raycaster.ray.direction.clone().multiplyScalar(90));
-  if(hits.length){const h=hits[0],enemy=h.object.userData.enemy;end=h.point;enemy.userData.health-=h.object===enemy.userData.eye?70:34;hit(enemy.userData.health<=0);if(enemy.userData.health<=0){enemy.userData.alive=false;enemy.visible=false;toast('HOSTILE NEUTRALIZED');}}
+  if(hits.length){const h=hits[0],enemy=h.object.userData.enemy,isHeadshot=h.object.userData.hitZone==='head';end=h.point;enemy.userData.health-=isHeadshot?100:34;hit(enemy.userData.health<=0);if(enemy.userData.health<=0){enemy.userData.alive=false;enemy.rotation.z=Math.PI/2;setTimeout(()=>enemy.visible=false,550);toast(isHeadshot?'HEADSHOT — HOSTILE NEUTRALIZED':'HOSTILE NEUTRALIZED');}}
   tracer(camera.position.clone().add(raycaster.ray.direction.clone().multiplyScalar(.7)),end);
 }
 
@@ -197,9 +210,12 @@ function reload(){if(state.reloading||state.ammo===30||state.reserve===0)return;
 
 function updateEnemies(dt){
   world.enemies.forEach(e=>{if(!e.userData.alive)return;const u=e.userData;const target=state.driving?state.driving.position:state.position;const d=e.position.distanceTo(target);
-    if(d<55){e.lookAt(target.x,e.position.y,target.z);if(d>12){const step=target.clone().sub(e.position).setY(0).normalize().multiplyScalar(dt*2.2);const next=e.position.clone().add(step);if(!collides(next,.6))e.position.copy(next);}
+    u.walking=false;
+    if(d<55){e.lookAt(target.x,e.position.y,target.z);if(d>12){const step=target.clone().sub(e.position).setY(0).normalize().multiplyScalar(dt*2.2);const next=e.position.clone().add(step);if(!collides(next,.6)){e.position.copy(next);u.walking=true;}}
       if(d<38&&world.time-u.lastShot>1.5+u.id*.07){u.lastShot=world.time;damage(7);tracer(e.position.clone(),target.clone());}
-    }else{e.position.x=u.origin.x+Math.sin(world.time*.45+u.phase)*5;e.position.z=u.origin.z+Math.cos(world.time*.38+u.phase)*5;}
+    }else{e.position.x=u.origin.x+Math.sin(world.time*.45+u.phase)*5;e.position.z=u.origin.z+Math.cos(world.time*.38+u.phase)*5;u.walking=true;}
+    const stride=u.walking?Math.sin(world.time*7+u.phase)*.62:Math.sin(world.time*2+u.phase)*.04;
+    u.leftArm.rotation.x=stride;u.rightArm.rotation.x=-stride;u.leftLeg.rotation.x=-stride;u.rightLeg.rotation.x=stride;
   });
 }
 function damage(n){if(state.dead)return;if(state.shield>0){const s=Math.min(n,state.shield);state.shield-=s;n-=s;}state.health=Math.max(0,state.health-n);ui.damage.classList.add('show');setTimeout(()=>ui.damage.classList.remove('show'),160);updateHUD();if(state.health<=0){state.dead=true;document.exitPointerLock();toast('ELIMINATED — CLICK DEPLOY TO RESPAWN');setTimeout(()=>resetPlayer(),1800);}}
