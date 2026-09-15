@@ -14,7 +14,8 @@ Then open `http://localhost:8080`.
 
 ## Controls
 
-- `WASD`: move / drive
+- `WASD`: move on foot (also supported while driving)
+- Arrow keys: accelerate, reverse, and steer vehicles
 - Mouse: aim
 - Left click: fire
 - `Shift`: sprint / vehicle boost
